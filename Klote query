@@ -1,0 +1,54 @@
+SELECT person_id
+, drug
+, quantity
+, ((days_since_visit_start * 24) + hours_since_visit_start + (minutes_since_visit_start / 60)) as hours_since_visit_start
+, start_datetime
+, end_datetime
+, date_diff
+, unit
+, (quantity * 1000 * (seconds + (minutes * 60) + (hours * 3600) + (days * 86400)) / 3600) as mcg_administered_total
+, (CASE
+        WHEN (hours > 0 OR days > 0)
+        THEN (quantity * 1000 * (minutes_since_visit_start * 60)) / 3600
+        ELSE (quantity * 1000 * (seconds + (minutes * 60) + (hours * 3600) + (days * 86400)) / 3600)
+    END) as mcg_administered_in_starting_hour
+, (CASE
+        WHEN (hours > 0 OR days > 0)
+        THEN (quantity * 1000 * (minutes_since_visit_end * 60)) / 3600
+        ELSE (quantity * 1000 * (seconds + (minutes * 60) + (hours * 3600) + (days * 86400)) / 3600)
+    END) as mcg_administered_in_ending_hour
+, administration_route
+FROM (
+    SELECT de.person_id
+    , de.drug_exposure_start_datetime - vo.visit_start_datetime as time_since_visit_start
+    , EXTRACT(MINUTE from (de.drug_exposure_start_datetime - vo.visit_start_datetime)) as minutes_since_visit_start
+    , EXTRACT(HOUR from (de.drug_exposure_start_datetime - vo.visit_start_datetime)) as hours_since_visit_start
+    , EXTRACT(DAY from (de.drug_exposure_start_datetime - vo.visit_start_datetime)) as days_since_visit_start
+    , de.drug_exposure_end_datetime - vo.visit_start_datetime as time_since_visit_end
+    , EXTRACT(MINUTE from (de.drug_exposure_end_datetime - vo.visit_start_datetime)) as minutes_since_visit_end
+    , de.drug_exposure_start_datetime as start_datetime
+    , de.drug_exposure_end_datetime as end_datetime
+    , de.drug_exposure_end_datetime - de.drug_exposure_start_datetime as date_diff
+    , EXTRACT(SECOND from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as seconds
+    , EXTRACT(MINUTE from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as minutes
+    , EXTRACT(HOUR from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as hours
+    , EXTRACT(DAY from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as days
+    , co.concept_id
+    , co.concept_name as drug
+    , de.quantity
+    , LOWER(de.dose_unit_source_value) AS unit
+    , de.route_source_value as administration_route
+    FROM (
+        drug_exposure de
+        INNER JOIN concept co ON (de.drug_concept_id = co.concept_id)
+        INNER JOIN visit_occurrence vo ON (de.visit_occurrence_id = vo.visit_occurrence_id)
+    )
+    WHERE   de.quantity <> 0 AND
+            co.domain_id = 'Drug' AND
+            (LOWER(de.dose_unit_source_value) = 'mg/kg/hour')
+    GROUP BY de.person_id, vo.visit_start_datetime, co.concept_id, co.concept_name, LOWER(de.dose_unit_source_value), de.drug_exposure_start_datetime, de.drug_exposure_end_datetime, de.route_source_value, de.quantity
+    ORDER BY de.quantity DESC
+)
+WHERE seconds + minutes + hours + days > 0 AND
+hours > 1
+LIMIT 10
