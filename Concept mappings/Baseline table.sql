@@ -1,6 +1,6 @@
 select vo.visit_occurrence_id
     , vo.person_id
-    , floor(extract(day from (vo.visit_start_datetime - pe.birth_datetime))/365.25)  as fixed_age
+    , date_diff('year', pe.birth_datetime, vo.visit_start_datetime)  as fixed_age
     , REVERSE(SUBSTR(REVERSE(SUBSTR(
             (
                 select max(lexical_variant)
@@ -232,4 +232,4 @@ select vo.visit_occurrence_id
     , CASE WHEN (select count(*) from procedure_occurrence po where procedure_concept_id = 2001563 AND po.visit_occurrence_id = vo.visit_occurrence_id) > 0 then 1 else 0 end as fixed_Implant_of_pulsation_balloon
 from visit_occurrence vo
     join person pe on pe.person_id = vo.person_id
-where floor(extract(day from (vo.visit_start_datetime - pe.birth_datetime))/365.25) >= 18
+where date_diff('year', pe.birth_datetime, vo.visit_start_datetime) >= 18
