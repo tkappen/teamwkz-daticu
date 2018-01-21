@@ -74,9 +74,90 @@ FROM (
         INNER JOIN concept co ON (de.drug_concept_id = co.concept_id))
     WHERE   de.quantity <> 0 AND
             co.domain_id = 'Drug' AND
-            (LOWER(de.dose_unit_source_value) = 'mcg/kg/min') AND
-            LOWER(de.route_source_value) LIKE '%iv%'
+            (LOWER(de.dose_unit_source_value) = 'mcg/kg/min')
     GROUP BY de.person_id, co.concept_id, co.concept_name, LOWER(de.dose_unit_source_value), de.drug_exposure_start_datetime, de.drug_exposure_end_datetime, de.route_source_value, de.quantity
     ORDER BY de.quantity DESC
 )
 WHERE seconds + minutes + hours + days > 0
+
+/* pumps from mg/kg/hour calculated as mg per patient with start and end datetime */
+SELECT person_id
+, drug
+, quantity
+, start_datetime
+, end_datetime
+, date_diff
+, unit
+, (quantity * 1000 * (seconds + (minutes * 60) + (hours * 3600) + (days * 86400)) / 3600) as mg_administered
+, administration_route
+FROM (
+    SELECT de.person_id
+    , de.drug_exposure_start_datetime as start_datetime
+    , de.drug_exposure_end_datetime as end_datetime
+    , de.drug_exposure_end_datetime - de.drug_exposure_start_datetime as date_diff
+    , EXTRACT(SECOND from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as seconds
+    , EXTRACT(MINUTE from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as minutes
+    , EXTRACT(HOUR from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as hours
+    , EXTRACT(DAY from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as days
+    , co.concept_id
+    , co.concept_name as drug
+    , de.quantity
+    , LOWER(de.dose_unit_source_value) AS unit
+    , de.route_source_value as administration_route
+    FROM
+      (drug_exposure de
+        INNER JOIN concept co ON (de.drug_concept_id = co.concept_id))
+    WHERE   de.quantity <> 0 AND
+            co.domain_id = 'Drug' AND
+            (LOWER(de.dose_unit_source_value) = 'mg/kg/hour')
+    GROUP BY de.person_id, co.concept_id, co.concept_name, LOWER(de.dose_unit_source_value), de.drug_exposure_start_datetime, de.drug_exposure_end_datetime, de.route_source_value, de.quantity
+    ORDER BY de.quantity DESC
+)
+WHERE seconds + minutes + hours + days > 0
+
+/* pumps from mg/hour calculated as mcg per patient with start and end datetime */
+SELECT person_id
+, drug
+, quantity
+, start_datetime
+, end_datetime
+, date_diff
+, unit
+, (quantity * 1000 * (seconds + (minutes * 60) + (hours * 3600) + (days * 86400)) / 3600) as mg_administered
+, administration_route
+FROM (
+    SELECT de.person_id
+    , de.drug_exposure_start_datetime as start_datetime
+    , de.drug_exposure_end_datetime as end_datetime
+    , de.drug_exposure_end_datetime - de.drug_exposure_start_datetime as date_diff
+    , EXTRACT(SECOND from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as seconds
+    , EXTRACT(MINUTE from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as minutes
+    , EXTRACT(HOUR from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as hours
+    , EXTRACT(DAY from (de.drug_exposure_end_datetime - de.drug_exposure_start_datetime)) as days
+    , co.concept_id
+    , co.concept_name as drug
+    , de.quantity
+    , LOWER(de.dose_unit_source_value) AS unit
+    , de.route_source_value as administration_route
+    FROM
+      (drug_exposure de
+        INNER JOIN concept co ON (de.drug_concept_id = co.concept_id))
+    WHERE   de.quantity <> 0 AND
+            co.domain_id = 'Drug' AND
+            (LOWER(de.dose_unit_source_value) = 'mg/hour')
+    GROUP BY de.person_id, co.concept_id, co.concept_name, LOWER(de.dose_unit_source_value), de.drug_exposure_start_datetime, de.drug_exposure_end_datetime, de.route_source_value, de.quantity
+    ORDER BY de.quantity DESC
+)
+WHERE seconds + minutes + hours + days > 0
+
+/* Subquery to get persons weight (kg) */
+SELECT person_id
+, REVERSE(SUBSTR(REVERSE(text_weight), 7, 6)) as admission_weight
+FROM (
+    SELECT person_id
+    , SUBSTR(lexical_variant, 19) as text_weight
+    FROM note_nlp
+    INNER JOIN note ON (note.note_id = note_nlp.note_id)
+    WHERE section_source_concept_id = 2001042802
+)
+LIMIT 10
