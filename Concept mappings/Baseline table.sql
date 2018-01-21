@@ -230,7 +230,7 @@ select vo.visit_occurrence_id
     , CASE WHEN (select count(*) from procedure_occurrence po where procedure_concept_id = 4313889 AND po.visit_occurrence_id = vo.visit_occurrence_id) > 0 then 1 else 0 end as fixed_Endoscopy
     , CASE WHEN (select count(*) from procedure_occurrence po where procedure_concept_id = 4279768 AND po.visit_occurrence_id = vo.visit_occurrence_id) > 0 then 1 else 0 end as fixed_Pulmonary_catheterization_with_Swan_Ganz_catheter
     , CASE WHEN (select count(*) from procedure_occurrence po where procedure_concept_id = 2001563 AND po.visit_occurrence_id = vo.visit_occurrence_id) > 0 then 1 else 0 end as fixed_Implant_of_pulsation_balloon
-    , CASE WHEN
+
 from visit_occurrence vo
     join person pe on pe.person_id = vo.person_id
     left join death on vo.person_id = death.person_id
