@@ -20,9 +20,9 @@ select vo.visit_occurrence_id
     , vo.visit_type_concept_id -- seems to always have the same value
     , co4.concept_name as visit_type_concept_value
 from visit_occurrence vo
-    join concept co on co.concept_id = vo.visit_concept_id
-    join concept co1 on co1.concept_id = vo.visit_source_concept_id
-    join concept co2 on co2.concept_id = vo.admitting_source_concept_id
-    join concept co3 on co3.concept_id = vo.discharge_to_concept_id
-    join concept co4 on co4.concept_id = vo.visit_type_concept_id
+    left join concept co on co.concept_id = vo.visit_concept_id
+    left join concept co1 on co1.concept_id = vo.visit_source_concept_id
+    left join concept co2 on co2.concept_id = vo.admitting_source_concept_id
+    left join concept co3 on co3.concept_id = vo.discharge_to_concept_id
+    left join concept co4 on co4.concept_id = vo.visit_type_concept_id
 limit 10
